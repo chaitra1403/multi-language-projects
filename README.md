@@ -4,7 +4,7 @@ This repository contains projects built in different programming languages.
 
 ## Projects
 
-### ☕ Java (Gradle)
+### ☕ Java (Gradle and Maven)
 
 - Student Management CLI
 
