@@ -1,0 +1,23 @@
+# Java / Gradle
+.gradle/
+build/
+
+# Python
+__pycache__/
+*.pyc
+
+# Go
+bin/
+
+# C++
+*.o
+*.out
+search_app
+
+# C#
+bin/
+obj/
+
+# VS Code / OS
+.vscode/
+.DS_Store
