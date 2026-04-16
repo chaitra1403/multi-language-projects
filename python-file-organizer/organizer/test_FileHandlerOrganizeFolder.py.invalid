@@ -1,0 +1,89 @@
+import os
+import shutil
+import pytest
+from python-file-organizer.organizer.file_handler import organize_folder
+
+FOLDERS = {
+    'images': ['.jpg', '.png', '.jpeg'],
+    'documents': ['.pdf', '.txt', '.docx'],
+    'code': ['.py', '.java', '.cpp'],
+    'archives': ['.zip', '.rar']
+}
+
+class Test_FileHandlerOrganizeFolder:
+
+    @pytest.mark.invalid
+    def test_path_does_not_exist(self, capsys):
+        # Arrange
+        non_existent_path = "/path/to/non/existent/directory"  # TODO: Change to a non-existent path
+
+        # Act
+        organize_folder(non_existent_path)
+
+        # Assert
+        captured = capsys.readouterr()
+        assert "Path does not exist!" in captured.out
+
+    @pytest.mark.positive
+    def test_organize_files_by_extension(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+        image_file = temp_dir.join("image.jpg")
+        document_file = temp_dir.join("document.pdf")
+        code_file = temp_dir.join("script.py")
+        archive_file = temp_dir.join("archive.zip")
+
+        image_file.write("image content")
+        document_file.write("document content")
+        code_file.write("code content")
+        archive_file.write("archive content")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        assert os.path.exists(temp_dir.join("images", "image.jpg"))
+        assert os.path.exists(temp_dir.join("documents", "document.pdf"))
+        assert os.path.exists(temp_dir.join("code", "script.py"))
+        assert os.path.exists(temp_dir.join("archives", "archive.zip"))
+
+    @pytest.mark.positive
+    def test_files_with_no_matching_extension(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+        unknown_file = temp_dir.join("unknown.xyz")
+
+        unknown_file.write("unknown content")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        assert os.path.exists(temp_dir.join("others", "unknown.xyz"))
+
+    @pytest.mark.positive
+    def test_no_duplicate_folders(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+        existing_folder = temp_dir.mkdir("images")
+        image_file = temp_dir.join("image.jpg")
+
+        image_file.write("image content")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        assert os.path.exists(temp_dir.join("images", "image.jpg"))
+        assert len(os.listdir(existing_folder)) == 1  # No duplicate folder created
+
+    @pytest.mark.positive
+    def test_empty_directory(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        assert len(os.listdir(temp_dir)) == 0  # No folders created
