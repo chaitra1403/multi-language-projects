@@ -1,7 +1,7 @@
 import os
 import shutil
 import pytest
-from python-file-organizer.organizer.file_handler import organize_folder
+from file_handler import organize_folder
 
 FOLDERS = {
     'images': ['.jpg', '.png', '.jpeg'],
