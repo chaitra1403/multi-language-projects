@@ -1,0 +1,102 @@
+import os
+import shutil
+import pytest
+from python-file-organizer.organizer.file_handler import organize_folder
+
+class Test_FileHandlerOrganizeFolder:
+
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self, tmp_path):
+        self.test_dir = tmp_path / "test_directory"
+        self.test_dir.mkdir()
+        yield
+        shutil.rmtree(self.test_dir)
+
+    @pytest.mark.invalid
+    def test_path_does_not_exist(self, capsys):
+        non_existent_path = self.test_dir / "non_existent"
+        organize_folder(non_existent_path)
+        captured = capsys.readouterr()
+        assert "Path does not exist!" in captured.out
+
+    @pytest.mark.valid
+    def test_organize_files_into_existing_folders(self):
+        # Arrange
+        images_folder = self.test_dir / "images"
+        images_folder.mkdir()
+        documents_folder = self.test_dir / "documents"
+        documents_folder.mkdir()
+
+        image_file = self.test_dir / "photo.jpg"
+        document_file = self.test_dir / "file.pdf"
+        image_file.touch()
+        document_file.touch()
+
+        # Act
+        organize_folder(self.test_dir)
+
+        # Assert
+        assert not image_file.exists()
+        assert not document_file.exists()
+        assert (images_folder / "photo.jpg").exists()
+        assert (documents_folder / "file.pdf").exists()
+
+    @pytest.mark.valid
+    def test_create_new_folders_for_file_types(self):
+        # Arrange
+        new_file = self.test_dir / "newfile.xyz"
+        new_file.touch()
+
+        # Act
+        organize_folder(self.test_dir)
+
+        # Assert
+        new_folder = self.test_dir / "others"
+        assert new_folder.exists()
+        assert (new_folder / "newfile.xyz").exists()
+
+    @pytest.mark.valid
+    def test_move_files_to_others_folder(self):
+        # Arrange
+        unmatched_file = self.test_dir / "unmatched_file.xyz"
+        unmatched_file.touch()
+
+        # Act
+        organize_folder(self.test_dir)
+
+        # Assert
+        others_folder = self.test_dir / "others"
+        assert others_folder.exists()
+        assert (others_folder / "unmatched_file.xyz").exists()
+
+    @pytest.mark.valid
+    def test_handle_mixed_content(self):
+        # Arrange
+        subdirectory = self.test_dir / "subdir"
+        subdirectory.mkdir()
+        file_in_subdir = subdirectory / "file.txt"
+        file_in_subdir.touch()
+
+        file_in_root = self.test_dir / "rootfile.txt"
+        file_in_root.touch()
+
+        # Act
+        organize_folder(self.test_dir)
+
+        # Assert
+        documents_folder = self.test_dir / "documents"
+        assert documents_folder.exists()
+        assert (documents_folder / "rootfile.txt").exists()
+        assert (subdirectory / "file.txt").exists()
+
+    @pytest.mark.valid
+    def test_no_files_to_organize(self):
+        # Arrange
+        subdirectory = self.test_dir / "subdir"
+        subdirectory.mkdir()
+
+        # Act
+        organize_folder(self.test_dir)
+
+        # Assert
+        assert len(list(self.test_dir.iterdir())) == 1  # Only subdir should exist
