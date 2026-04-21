@@ -10,6 +10,7 @@ FOLDERS = {
 }
 
 def organize_folder(path):
+    print("Indide organise folder")
     if not os.path.exists(path):
         print("Path does not exist!")
         return
