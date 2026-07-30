@@ -21,3 +21,5 @@ obj/
 # VS Code / OS
 .vscode/
 .DS_Store
+
+venv
