@@ -1,0 +1,111 @@
+import os
+import shutil
+import pytest
+from python-file-organizer.organizer.file_handler import organize_folder
+
+FOLDERS = {'images': ['.jpg', '.png', '.jpeg'], 'documents': ['.pdf', '.txt', '.docx'], 'code': ['.py', '.java', '.cpp'], 'archives': ['.zip', '.rar']}
+
+class Test_FileHandlerOrganizeFolder:
+
+    @pytest.mark.invalid
+    def test_path_does_not_exist(self, capsys):
+        # Arrange
+        non_existent_path = "non_existent_directory"  # TODO: Ensure this path does not exist
+
+        # Act
+        organize_folder(non_existent_path)
+
+        # Assert
+        captured = capsys.readouterr()
+        assert "Path does not exist!" in captured.out
+
+    @pytest.mark.valid
+    def test_organize_files_into_existing_folders(self, tmp_path, capsys):
+        # Arrange
+        test_dir = tmp_path / "test_dir"
+        test_dir.mkdir()
+        (test_dir / "image1.jpg").write_text("dummy data")
+        (test_dir / "document1.pdf").write_text("dummy data")
+        (test_dir / "code1.py").write_text("dummy data")
+        (test_dir / "images").mkdir()
+        (test_dir / "documents").mkdir()
+        (test_dir / "code").mkdir()
+
+        # Act
+        organize_folder(str(test_dir))
+
+        # Assert
+        assert (test_dir / "images" / "image1.jpg").exists()
+        assert (test_dir / "documents" / "document1.pdf").exists()
+        assert (test_dir / "code" / "code1.py").exists()
+        captured = capsys.readouterr()
+        assert "Moved image1.jpg → images/" in captured.out
+        assert "Moved document1.pdf → documents/" in captured.out
+        assert "Moved code1.py → code/" in captured.out
+
+    @pytest.mark.valid
+    def test_organize_files_into_new_folders(self, tmp_path, capsys):
+        # Arrange
+        test_dir = tmp_path / "test_dir"
+        test_dir.mkdir()
+        (test_dir / "image2.png").write_text("dummy data")
+        (test_dir / "document2.txt").write_text("dummy data")
+        (test_dir / "code2.java").write_text("dummy data")
+
+        # Act
+        organize_folder(str(test_dir))
+
+        # Assert
+        assert (test_dir / "images" / "image2.png").exists()
+        assert (test_dir / "documents" / "document2.txt").exists()
+        assert (test_dir / "code" / "code2.java").exists()
+        captured = capsys.readouterr()
+        assert "Moved image2.png → images/" in captured.out
+        assert "Moved document2.txt → documents/" in captured.out
+        assert "Moved code2.java → code/" in captured.out
+
+    @pytest.mark.valid
+    def test_move_files_to_others_folder(self, tmp_path, capsys):
+        # Arrange
+        test_dir = tmp_path / "test_dir"
+        test_dir.mkdir()
+        (test_dir / "unknown.xyz").write_text("dummy data")
+
+        # Act
+        organize_folder(str(test_dir))
+
+        # Assert
+        assert (test_dir / "others" / "unknown.xyz").exists()
+        captured = capsys.readouterr()
+        assert "Moved unknown.xyz → others/" in captured.out
+
+    @pytest.mark.valid
+    def test_handle_mixed_content(self, tmp_path, capsys):
+        # Arrange
+        test_dir = tmp_path / "test_dir"
+        test_dir.mkdir()
+        (test_dir / "image3.jpeg").write_text("dummy data")
+        (test_dir / "subdir").mkdir()
+
+        # Act
+        organize_folder(str(test_dir))
+
+        # Assert
+        assert (test_dir / "images" / "image3.jpeg").exists()
+        assert (test_dir / "subdir").exists()  # Subdirectory should remain unaffected
+        captured = capsys.readouterr()
+        assert "Moved image3.jpeg → images/" in captured.out
+
+    @pytest.mark.valid
+    def test_no_files_to_organize(self, tmp_path, capsys):
+        # Arrange
+        test_dir = tmp_path / "test_dir"
+        test_dir.mkdir()
+
+        # Act
+        organize_folder(str(test_dir))
+
+        # Assert
+        assert not any(test_dir.iterdir())  # No files or folders should be created
+        captured = capsys.readouterr()
+        assert captured.out == ""  # No output messages indicating file movement
