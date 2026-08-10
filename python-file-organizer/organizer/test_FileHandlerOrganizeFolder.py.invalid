@@ -1,0 +1,101 @@
+import os
+import shutil
+import pytest
+from python-file-organizer.organizer.file_handler import organize_folder
+
+FOLDERS = {
+    'images': ['.jpg', '.png', '.jpeg'],
+    'documents': ['.pdf', '.txt', '.docx'],
+    'code': ['.py', '.java', '.cpp'],
+    'archives': ['.zip', '.rar']
+}
+
+class Test_FileHandlerOrganizeFolder:
+
+    @pytest.mark.invalid
+    def test_non_existent_path(self, capsys):
+        # Arrange
+        non_existent_path = "/path/to/non/existent/directory"  # TODO: Change to a non-existent path
+
+        # Act
+        organize_folder(non_existent_path)
+
+        # Assert
+        captured = capsys.readouterr()
+        assert "Path does not exist!" in captured.out
+
+    @pytest.mark.valid
+    def test_organize_files_by_extension(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+        file_paths = [
+            temp_dir.join("image.jpg"),
+            temp_dir.join("document.pdf"),
+            temp_dir.join("script.py"),
+            temp_dir.join("archive.zip")
+        ]
+        for file_path in file_paths:
+            file_path.write("content")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        for folder, extensions in FOLDERS.items():
+            folder_path = temp_dir.join(folder)
+            assert folder_path.check(dir=True)
+            for ext in extensions:
+                file_name = f"file{ext}"
+                file_path = folder_path.join(file_name)
+                if file_path.check():
+                    assert file_path.check(file=True)
+
+    @pytest.mark.valid
+    def test_files_with_no_matching_extension(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+        file_paths = [
+            temp_dir.join("unknown.xyz"),
+            temp_dir.join("another.abc")
+        ]
+        for file_path in file_paths:
+            file_path.write("content")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        others_folder = temp_dir.join("others")
+        assert others_folder.check(dir=True)
+        for file_path in file_paths:
+            assert others_folder.join(file_path.basename).check(file=True)
+
+    @pytest.mark.valid
+    def test_existing_folders_not_overwritten(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+        existing_folder = temp_dir.mkdir("images")
+        existing_file = existing_folder.join("existing.jpg")
+        existing_file.write("content")
+
+        new_file = temp_dir.join("new_image.jpg")
+        new_file.write("content")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        assert existing_folder.check(dir=True)
+        assert existing_file.check(file=True)
+        assert existing_folder.join("new_image.jpg").check(file=True)
+
+    @pytest.mark.valid
+    def test_empty_directory(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        assert len(temp_dir.listdir()) == 0
