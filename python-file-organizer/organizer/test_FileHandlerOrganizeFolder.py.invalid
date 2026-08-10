@@ -1,0 +1,91 @@
+import os
+import shutil
+import pytest
+from file_handler import organize_folder
+
+FOLDERS = {
+    'images': ['.jpg', '.png', '.jpeg'],
+    'documents': ['.pdf', '.txt', '.docx'],
+    'code': ['.py', '.java', '.cpp'],
+    'archives': ['.zip', '.rar']
+}
+
+class Test_FileHandlerOrganizeFolder:
+
+    @pytest.mark.invalid
+    def test_path_does_not_exist(self, capsys):
+        # Arrange
+        non_existent_path = "/path/to/nonexistent/directory"  # TODO: Change to a non-existent path
+
+        # Act
+        organize_folder(non_existent_path)
+
+        # Assert
+        captured = capsys.readouterr()
+        assert "Path does not exist!" in captured.out
+
+    @pytest.mark.valid
+    def test_organize_files_into_specified_folders(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+        image_file = temp_dir.join("image.jpg")
+        doc_file = temp_dir.join("document.pdf")
+        code_file = temp_dir.join("script.py")
+        image_file.write("")
+        doc_file.write("")
+        code_file.write("")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        assert os.path.exists(temp_dir.join("images", "image.jpg"))
+        assert os.path.exists(temp_dir.join("documents", "document.pdf"))
+        assert os.path.exists(temp_dir.join("code", "script.py"))
+
+    @pytest.mark.valid
+    def test_move_unmatched_files_to_others(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+        unmatched_file = temp_dir.join("unmatched.xyz")
+        unmatched_file.write("")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        assert os.path.exists(temp_dir.join("others", "unmatched.xyz"))
+
+    @pytest.mark.valid
+    def test_handle_empty_directory(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        assert len(os.listdir(temp_dir)) == 0
+
+    @pytest.mark.valid
+    def test_ensure_idempotency_of_organize_operation(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+        image_file = temp_dir.join("image.jpg")
+        doc_file = temp_dir.join("document.pdf")
+        code_file = temp_dir.join("script.py")
+        image_file.write("")
+        doc_file.write("")
+        code_file.write("")
+
+        # Act
+        organize_folder(str(temp_dir))
+        organize_folder(str(temp_dir))  # Run again to check idempotency
+
+        # Assert
+        assert os.path.exists(temp_dir.join("images", "image.jpg"))
+        assert os.path.exists(temp_dir.join("documents", "document.pdf"))
+        assert os.path.exists(temp_dir.join("code", "script.py"))
+        assert len(os.listdir(temp_dir.join("images"))) == 1
+        assert len(os.listdir(temp_dir.join("documents"))) == 1
+        assert len(os.listdir(temp_dir.join("code"))) == 1
