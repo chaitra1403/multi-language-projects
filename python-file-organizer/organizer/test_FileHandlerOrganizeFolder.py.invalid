@@ -1,0 +1,115 @@
+import os
+import shutil
+import pytest
+from python-file-organizer.organizer.file_handler import organize_folder
+
+FOLDERS = {
+    'images': ['.jpg', '.png', '.jpeg'],
+    'documents': ['.pdf', '.txt', '.docx'],
+    'code': ['.py', '.java', '.cpp'],
+    'archives': ['.zip', '.rar']
+}
+
+class Test_FileHandlerOrganizeFolder:
+
+    @pytest.mark.invalid
+    def test_path_does_not_exist(self, capsys):
+        # Arrange
+        non_existent_path = '/path/that/does/not/exist'  # TODO: Change to a non-existent path on your system
+
+        # Act
+        organize_folder(non_existent_path)
+
+        # Assert
+        captured = capsys.readouterr()
+        assert "Path does not exist!" in captured.out
+
+    @pytest.mark.valid
+    def test_organize_files_into_correct_folders(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+        files = {
+            'image1.jpg': 'images',
+            'document1.pdf': 'documents',
+            'script.py': 'code',
+            'archive.zip': 'archives'
+        }
+        for file_name in files.keys():
+            temp_dir.join(file_name).write("content")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        for file_name, folder in files.items():
+            assert os.path.exists(os.path.join(temp_dir, folder, file_name))
+
+    @pytest.mark.valid
+    def test_move_unmatched_files_to_others(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+        unmatched_files = ['unknown.xyz', 'randomfile.abc']
+        for file_name in unmatched_files:
+            temp_dir.join(file_name).write("content")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        for file_name in unmatched_files:
+            assert os.path.exists(os.path.join(temp_dir, 'others', file_name))
+
+    @pytest.mark.valid
+    def test_handle_empty_directory(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("empty_dir")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        assert not os.listdir(str(temp_dir))  # Directory should remain empty
+
+    @pytest.mark.valid
+    def test_existing_target_folders(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+        existing_folders = ['images', 'documents', 'code', 'archives']
+        for folder in existing_folders:
+            temp_dir.mkdir(folder)
+
+        files = {
+            'image1.jpg': 'images',
+            'document1.pdf': 'documents',
+            'script.py': 'code',
+            'archive.zip': 'archives'
+        }
+        for file_name in files.keys():
+            temp_dir.join(file_name).write("content")
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        for file_name, folder in files.items():
+            assert os.path.exists(os.path.join(temp_dir, folder, file_name))
+
+    @pytest.mark.valid
+    def test_mixed_content_directory(self, tmpdir):
+        # Arrange
+        temp_dir = tmpdir.mkdir("test_dir")
+        files = ['image1.jpg', 'document1.pdf', 'script.py']
+        subdirs = ['subdir1', 'subdir2']
+        for file_name in files:
+            temp_dir.join(file_name).write("content")
+        for subdir in subdirs:
+            temp_dir.mkdir(subdir)
+
+        # Act
+        organize_folder(str(temp_dir))
+
+        # Assert
+        for file_name in files:
+            assert any(os.path.exists(os.path.join(temp_dir, folder, file_name)) for folder in FOLDERS.keys())
+        for subdir in subdirs:
+            assert os.path.exists(os.path.join(temp_dir, subdir))

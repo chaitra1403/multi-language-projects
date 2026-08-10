@@ -1,0 +1,90 @@
+import os
+import shutil
+import pytest
+from python-file-organizer.organizer.file_handler import organize_folder
+
+FOLDERS = {
+    'images': ['.jpg', '.png', '.jpeg'],
+    'documents': ['.pdf', '.txt', '.docx'],
+    'code': ['.py', '.java', '.cpp'],
+    'archives': ['.zip', '.rar']
+}
+
+@pytest.mark.invalid
+def test_path_does_not_exist(capfd):
+    # Arrange
+    non_existent_path = "/path/to/nonexistent/directory"  # TODO: Change this to a non-existent path on your system
+
+    # Act
+    organize_folder(non_existent_path)
+
+    # Assert
+    captured = capfd.readouterr()
+    assert "Path does not exist!" in captured.out
+
+@pytest.mark.positive
+def test_organize_files_into_correct_folders(tmpdir):
+    # Arrange
+    temp_dir = tmpdir.mkdir("test_dir")
+    image_file = temp_dir.join("image.jpg")
+    document_file = temp_dir.join("document.pdf")
+    code_file = temp_dir.join("script.py")
+    archive_file = temp_dir.join("archive.zip")
+
+    image_file.write("image content")
+    document_file.write("document content")
+    code_file.write("code content")
+    archive_file.write("archive content")
+
+    # Act
+    organize_folder(str(temp_dir))
+
+    # Assert
+    assert os.path.exists(temp_dir.join("images", "image.jpg"))
+    assert os.path.exists(temp_dir.join("documents", "document.pdf"))
+    assert os.path.exists(temp_dir.join("code", "script.py"))
+    assert os.path.exists(temp_dir.join("archives", "archive.zip"))
+
+@pytest.mark.positive
+def test_move_files_to_others_folder(tmpdir):
+    # Arrange
+    temp_dir = tmpdir.mkdir("test_dir")
+    unknown_file = temp_dir.join("unknown.xyz")
+
+    unknown_file.write("unknown content")
+
+    # Act
+    organize_folder(str(temp_dir))
+
+    # Assert
+    assert os.path.exists(temp_dir.join("others", "unknown.xyz"))
+
+@pytest.mark.positive
+def test_handle_empty_directory(tmpdir):
+    # Arrange
+    temp_dir = tmpdir.mkdir("empty_dir")
+
+    # Act
+    organize_folder(str(temp_dir))
+
+    # Assert
+    assert len(os.listdir(temp_dir)) == 0
+
+@pytest.mark.positive
+def test_preserve_existing_folder_structure(tmpdir):
+    # Arrange
+    temp_dir = tmpdir.mkdir("test_dir")
+    existing_folder = temp_dir.mkdir("existing_folder")
+    file_in_existing_folder = existing_folder.join("file.txt")
+    file_to_organize = temp_dir.join("document.pdf")
+
+    file_in_existing_folder.write("content")
+    file_to_organize.write("document content")
+
+    # Act
+    organize_folder(str(temp_dir))
+
+    # Assert
+    assert os.path.exists(existing_folder)
+    assert os.path.exists(file_in_existing_folder)
+    assert os.path.exists(temp_dir.join("documents", "document.pdf"))
