@@ -1,0 +1,98 @@
+import os
+import shutil
+import tempfile
+import pytest
+from unittest.mock import patch
+from python-file-organizer.organizer.file_handler import organize_folder
+
+FOLDERS = {
+    'images': ['.jpg', '.png', '.jpeg'],
+    'documents': ['.pdf', '.txt', '.docx'],
+    'code': ['.py', '.java', '.cpp'],
+    'archives': ['.zip', '.rar']
+}
+
+class Test_FileHandlerOrganizeFolder:
+
+    @pytest.mark.positive
+    def test_organize_files_into_designated_folders(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Arrange
+            files = ['image1.jpg', 'document1.pdf', 'code1.py', 'archive1.zip']
+            for file in files:
+                open(os.path.join(temp_dir, file), 'a').close()
+
+            # Act
+            organize_folder(temp_dir)
+
+            # Assert
+            for folder, extensions in FOLDERS.items():
+                folder_path = os.path.join(temp_dir, folder)
+                assert os.path.exists(folder_path)
+                for file in files:
+                    if any(file.endswith(ext) for ext in extensions):
+                        assert os.path.exists(os.path.join(folder_path, file))
+
+    @pytest.mark.negative
+    def test_handle_non_existent_path(self):
+        # Arrange
+        non_existent_path = "/path/does/not/exist"  # TODO: Ensure this path does not exist
+
+        # Act & Assert
+        with patch('builtins.print') as mocked_print:
+            organize_folder(non_existent_path)
+            mocked_print.assert_called_once_with("Path does not exist!")
+
+    @pytest.mark.positive
+    def test_move_files_to_others_folder(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Arrange
+            files = ['unknown1.xyz', 'unknown2.abc']
+            for file in files:
+                open(os.path.join(temp_dir, file), 'a').close()
+
+            # Act
+            organize_folder(temp_dir)
+
+            # Assert
+            others_folder_path = os.path.join(temp_dir, 'others')
+            assert os.path.exists(others_folder_path)
+            for file in files:
+                assert os.path.exists(os.path.join(others_folder_path, file))
+
+    @pytest.mark.positive
+    def test_create_folders_if_not_exist(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Arrange
+            files = ['image1.jpg', 'document1.pdf']
+            for file in files:
+                open(os.path.join(temp_dir, file), 'a').close()
+
+            # Act
+            organize_folder(temp_dir)
+
+            # Assert
+            for folder in FOLDERS.keys():
+                folder_path = os.path.join(temp_dir, folder)
+                assert os.path.exists(folder_path)
+
+    @pytest.mark.positive
+    def test_ignore_non_file_entries(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Arrange
+            os.makedirs(os.path.join(temp_dir, 'subdir'))
+            files = ['file1.txt', 'file2.docx']
+            for file in files:
+                open(os.path.join(temp_dir, file), 'a').close()
+
+            # Act
+            organize_folder(temp_dir)
+
+            # Assert
+            assert os.path.exists(os.path.join(temp_dir, 'subdir'))
+            for folder, extensions in FOLDERS.items():
+                folder_path = os.path.join(temp_dir, folder)
+                if os.path.exists(folder_path):
+                    for file in files:
+                        if any(file.endswith(ext) for ext in extensions):
+                            assert os.path.exists(os.path.join(folder_path, file))
